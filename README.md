@@ -1,90 +1,113 @@
-# Firmware y adquisición PPG 
+# Sistema de adquisición fotopletismográfica (PPG) para evaluación no invasiva de hemoglobina
 
-## Hardware asumido
-- ESP32-S3 DevKit; pines I2C propuestos: SDA GPIO8, SCL GPIO9.
-- ADS1115 alimentado a 3.3 V; ADDR a GND (dirección 0x48).
-- MCP6002-I/P como TIA, alimentado a 3.3 V.
-- BPW34 conectado al TIA.
-- Salida del TIA a ADS1115 A0.
-- Salida bufferizada VREF (~1.65 V) a ADS1115 A1.
-- LED rojo convencional accionado por transistor desde GPIO4.
-- GND común.
+**Proyecto de Instrumentación Electrónica – Grupo 08**
 
-Verificar que el módulo ADS1115 tenga pull-ups I2C adecuados a 3.3 V. No aplicar 5 V a los GPIO del ESP32-S3 ni a las entradas ADS1115 cuando se alimentan a 3.3 V.
+**Universidad Nacional Mayor de San Marcos**  
+Facultad de Ingeniería Electrónica y Eléctrica  
+Escuela Profesional de Ingeniería Biomédica
 
-## Firmware Arduino IDE
-Instalar desde Library Manager:
-- Adafruit ADS1X15
-- Adafruit BusIO (normalmente se instala como dependencia)
+## Descripción del proyecto
 
-Orden sugerido:
-1. Abrir `firmware/00_Escaner_I2C.ino` y confirmar que aparece 0x48.
-2. Abrir `firmware/01_Prueba_ADS1115.ino` y comprobar A0, A1 y A0-A1.
-3. Abrir `firmware/02_PPG_BPW34_ADS1115.ino` para adquisición continua.
+El presente repositorio contiene los archivos de programación, adquisición, procesamiento y visualización desarrollados para el prototipo de un sistema de instrumentación biomédica basado en fotopletismografía (PPG).
 
-El firmware de adquisición usa:
-- GPIO4 para el driver del LED (LED encendido al iniciar).
-- GPIO8 SDA, GPIO9 SCL.
-- ADS1115 diferencial A0-A1.
-- Ganancia GAIN_TWO (+/-2.048 V) y tasa nominal 128 SPS.
-- Salida serial CSV a 115200 baudios.
+El proyecto busca desarrollar una plataforma de adquisición óptica que permita obtener señales fisiológicas mediante diferentes longitudes de onda, con miras a investigar su utilización en la estimación no invasiva de hemoglobina.
 
-Comandos por serial:
-- `L1` + Enter: LED encendido.
-- `L0` + Enter: LED apagado.
+La primera versión del prototipo está orientada a comprobar experimentalmente una cadena de adquisición PPG propia, utilizando un fotodiodo BPW34, un amplificador operacional MCP6002 y un convertidor analógico-digital ADS1115, controlados mediante un microcontrolador ESP32-S3.
 
-La función de lectura diferencial de la biblioteca inicia una conversión y espera su resultado. La frecuencia efectiva puede ser menor que 128 SPS por el tiempo de conversión y el envío serial; por eso el firmware registra `t_us` y Python calcula la frecuencia real. No afirmar 128 SPS efectivos sin medirlos.
+## Arquitectura de la primera versión
 
-## Python
-Instalar Python 3.10 o superior. Desde esta carpeta:
+La cadena de adquisición implementada contempla los siguientes elementos:
+
+- **ESP32-S3:** unidad central de control, adquisición y comunicación.
+- **LED rojo:** emisor óptico para las primeras pruebas de reflectancia.
+- **BPW34:** fotodiodo encargado de recibir la radiación óptica reflejada.
+- **MCP6002:** acondicionamiento analógico mediante amplificación de transimpedancia y generación de referencia.
+- **ADS1115:** conversión analógico-digital de 16 bits mediante comunicación I²C.
+- **Python:** recepción, almacenamiento, visualización y análisis preliminar de las señales.
+
+La lectura analógica se realiza de manera diferencial entre las entradas A0 y A1 del ADS1115, permitiendo observar las variaciones de la señal respecto a la referencia de polarización del amplificador.
+
+## Estructura del repositorio
+
+```text
+prototipo-ppg-bpw34-esp32s3/
+│
+├── firmware/
+│   ├── 01_escaner_i2c.ino
+│   ├── 02_prueba_led.ino
+│   └── 03_adquisicion_ppg_ads1115.ino
+│
+├── python/
+│   ├── capturar_ppg.py
+│   ├── graficar_ppg.py
+│   └── requirements.txt
+│
+├── datos/
+│
+└── README.md
+```
+
+## Firmware del ESP32-S3
+
+La carpeta `firmware` contiene los programas desarrollados para:
+
+1. Verificar la comunicación I²C entre el ESP32-S3 y el ADS1115.
+2. Comprobar la activación del LED mediante una etapa de conmutación.
+3. Adquirir la señal analógica de manera diferencial y transmitir los resultados mediante comunicación serial USB.
+
+## Procesamiento en Python
+
+La carpeta `python` contiene las herramientas desarrolladas para:
+
+- Capturar datos provenientes del ESP32-S3.
+- Registrar mediciones en archivos CSV.
+- Organizar las capturas según las condiciones experimentales.
+- Representar gráficamente las señales PPG.
+- Realizar una inspección preliminar de sus componentes AC y DC.
+
+### Instalación de dependencias
+
+Se requiere Python 3 y las bibliotecas indicadas en `requirements.txt`.
 
 ```bash
-python -m venv .venv
-.venv\\Scripts\\activate
 pip install -r requirements.txt
 ```
 
-Capturar:
+### Ejecución de los programas
+
+Para registrar las mediciones:
 
 ```bash
 python capturar_ppg.py
 ```
 
-El script pregunta puerto COM, código anónimo, condición y duración. Cierra Arduino Serial Monitor/Plotter antes de usarlo. Las capturas se guardan en `datos/raw`.
-
-Graficar:
+Para visualizar una captura:
 
 ```bash
 python graficar_ppg.py
 ```
 
-O pasar un archivo:
+## Proyección de desarrollo
 
-```bash
-python graficar_ppg.py "..\\datos\\raw\\archivo.csv"
-```
+La primera versión constituye una etapa inicial de instrumentación y adquisición óptica.
 
-## Interpretación y límites
-- El ADC mide `A0 - A1`, es decir, salida TIA menos referencia bufferizada. Esto permite observar la señal diferencial centrada en VREF.
-- A0 y A1 deben permanecer individualmente dentro de GND y VDD; la ganancia diferencial no permite sobrepasar los límites de los pines.
-- El ADS1115 es una sustitución de prototipo, no equivalente al ADS1220 de la arquitectura multiespectral final.
-- El LED rojo convencional no puede declararse como 660 nm sin datasheet.
-- Las capturas obtenidas con BPW34/MCP6002 no deben mezclarse sin más con el dataset del MAX30102. Reentrenar el clasificador con registros de la cadena nueva.
-- El montaje es experimental, no diagnóstico. Para ensayos con dedo, usar alimentación por batería sin cargador conectado y no conectar simultáneamente osciloscopios/equipos referenciados a red sin evaluación de aislamiento.
+Las siguientes etapas contemplan:
 
-## Modelo preliminar de calidad
-Después de reunir capturas nuevas de la cadena BPW34 + MCP6002 + ADS1115 (varios participantes y ambas condiciones), instalar los paquetes adicionales de `requirements.txt` y ejecutar:
+- Incorporación de emisores de 660, 730, 850 y 940 nm.
+- Desarrollo de la adquisición multiespectral.
+- Implementación del convertidor ADS1220.
+- Integración de sensores auxiliares de fuerza y temperatura.
+- Reproducción de señales PPG mediante un convertidor DAC MCP4921.
+- Integración del procesamiento digital y evaluación de algoritmos de clasificación.
+- Validación experimental progresiva del sistema.
 
-```bash
-python entrenar_calidad.py
-```
+## Consideraciones
 
-Se extraen cuatro características por captura completa: media diferencial, desviación AC, amplitud robusta y desviación de diferencias. El árbol se evalúa separando participantes, no ventanas aleatorias de la misma captura. Se necesita un mínimo práctico de 3 participantes y ambas etiquetas en entrenamiento y prueba.
+Los resultados obtenidos corresponden a un prototipo académico experimental. El sistema no constituye un dispositivo médico certificado, no realiza diagnósticos y su primera versión no proporciona estimaciones clínicas de hemoglobina.
 
-Para evaluar una captura nueva:
+## Autores
 
-```bash
-python predecir_captura.py "..\\datos\\raw\\P01_prueba_YYYYMMDD_HHMMSS.csv"
-```
+**Grupo 08 – Proyecto de Instrumentación Electrónica**
 
-El modelo debe entrenarse con capturas de esta nueva cadena analógica. No reutilizar directamente el modelo entrenado con MAX30102, porque la escala, respuesta espectral, geometría y acondicionamiento son diferentes.
+Universidad Nacional Mayor de San Marcos  
+Escuela Profesional de Ingeniería Biomédica
