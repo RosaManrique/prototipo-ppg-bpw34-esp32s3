@@ -1,4 +1,4 @@
-# Firmware y adquisición PPG V1
+# Firmware y adquisición PPG 
 
 ## Hardware asumido
 - ESP32-S3 DevKit; pines I2C propuestos: SDA GPIO8, SCL GPIO9.
