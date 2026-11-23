@@ -1,0 +1,17 @@
+# Entornos virtuales
+.venv/
+venv/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Datos experimentales privados
+datos/*.csv
+
+# Gráficos generados
+*.png
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
