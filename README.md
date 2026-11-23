@@ -105,9 +105,4 @@ Las siguientes etapas contemplan:
 
 Los resultados obtenidos corresponden a un prototipo académico experimental. El sistema no constituye un dispositivo médico certificado, no realiza diagnósticos y su primera versión no proporciona estimaciones clínicas de hemoglobina.
 
-## Autores
 
-**Grupo 08 – Proyecto de Instrumentación Electrónica**
-
-Universidad Nacional Mayor de San Marcos  
-Escuela Profesional de Ingeniería Biomédica
